@@ -1,12 +1,9 @@
-// import defaultExport from "./apiCalls"
-
 // Global Variables
 var winningWord = '';
 var currentRow = 1;
 var guess = '';
 var gamesPlayed = [];
 var wordsList;
-var gamesData
 
 // Query Selectors
 var inputs = document.querySelectorAll('input');
@@ -23,17 +20,16 @@ var stats = document.querySelector('#stats-section');
 var gameOverBox = document.querySelector('#game-over-section');
 var gameOverGuessCount = document.querySelector('#game-over-guesses-count');
 var gameOverGuessGrammar = document.querySelector('#game-over-guesses-plural');
+var statsTotalGames = document.querySelector('#stats-total-games')
+var statsPercentCorrect = document.querySelector('#stats-percent-correct')
+var statsAverageGuesses = document.querySelector('#stats-average-guesses')
 
 // Event Listeners
-window.addEventListener('load', fetchApiCalls);
+window.addEventListener('load', fetchWordList);
 
-for (var i = 0; i < inputs.length; i++) {
-  inputs[i].addEventListener('keyup', function() { moveToNextInput(event) });
-}
+inputs.forEach(input => input.addEventListener('keyup', function() { moveToNextInput(event) }))
 
-for (var i = 0; i < keyLetters.length; i++) {
-  keyLetters[i].addEventListener('click', function() { clickLetter(event) });
-}
+keyLetters.forEach(key => key.addEventListener('click', function() { clickLetter(event) }))
 
 guessButton.addEventListener('click', submitGuess);
 
@@ -41,13 +37,13 @@ viewRulesButton.addEventListener('click', viewRules);
 
 viewGameButton.addEventListener('click', viewGame);
 
-viewStatsButton.addEventListener('click', viewStats);
+viewStatsButton.addEventListener('click', fetchGameStats);
 
 // Functions
-function fetchApiCalls() {
+function fetchWordList() {
   returnDataPromises().then((data) => {
     wordsList = data[0]
-    gamesData = data[1]
+    // gamesPlayed = data[1]
     setGame()
   })
 }
@@ -64,13 +60,13 @@ function getRandomWord() {
 }
 
 function updateInputPermissions() {
-  for(var i = 0; i < inputs.length; i++) {
-    if(!inputs[i].id.includes(`-${currentRow}-`)) {
-      inputs[i].disabled = true;
+  inputs.forEach(input=>{
+    if(!input.id.includes(`-${currentRow}-`)) {
+      input.disabled = true
     } else {
-      inputs[i].disabled = false;
+      input.disabled = false
     }
-  }
+  })
 
   inputs[0].focus();
 }
@@ -88,12 +84,12 @@ function clickLetter(e) {
   var activeInput = null;
   var activeIndex = null;
 
-  for (var i = 0; i < inputs.length; i++) {
-    if(inputs[i].id.includes(`-${currentRow}-`) && !inputs[i].value && !activeInput) {
-      activeInput = inputs[i];
-      activeIndex = i;
+  inputs.forEach((input,index)=>{
+    if(input.id.includes(`-${currentRow}-`) && !input.value && !activeInput) {
+      activeInput = input;
+      activeIndex = index;
     }
-  }
+  })
 
   activeInput.value = e.target.innerText;
   inputs[activeIndex + 1].focus();
@@ -106,7 +102,11 @@ function submitGuess() {
     if (checkForWin()) {
       setTimeout(declareWinner, 1000);
     } else {
-      changeRow();
+      if(currentRow !== 6){
+        changeRow();
+      } else {
+        setTimeout(declareLoser, 1000)
+      }
     }
   } else {
     errorMessage.innerText = 'Not a valid word. Try again!';
@@ -116,11 +116,11 @@ function submitGuess() {
 function checkIsWord() {
   guess = '';
 
-  for(var i = 0; i < inputs.length; i++) {
-    if(inputs[i].id.includes(`-${currentRow}-`)) {
-      guess += inputs[i].value;
-    }
-  }
+  inputs.forEach(input => {
+    if(input.id.includes(`-${currentRow}-`)) {
+        guess += input.value;
+      }
+  })
 
   return wordsList.includes(guess);
 }
@@ -128,30 +128,30 @@ function checkIsWord() {
 function compareGuess() {
   var guessLetters = guess.split('');
 
-  for (var i = 0; i < guessLetters.length; i++) {
+  guessLetters.forEach((letter,i)=>{
+    if (winningWord.includes(letter) && winningWord.split('')[i] !== letter) {
+          updateBoxColor(i, 'wrong-location');
+          updateKeyColor(letter, 'wrong-location-key');
+        } else if (winningWord.split('')[i] === letter) {
+          updateBoxColor(i, 'correct-location');
+          updateKeyColor(letter, 'correct-location-key');
+        } else {
+          updateBoxColor(i, 'wrong');
+          updateKeyColor(letter, 'wrong-key');
+        }
+  })
 
-    if (winningWord.includes(guessLetters[i]) && winningWord.split('')[i] !== guessLetters[i]) {
-      updateBoxColor(i, 'wrong-location');
-      updateKeyColor(guessLetters[i], 'wrong-location-key');
-    } else if (winningWord.split('')[i] === guessLetters[i]) {
-      updateBoxColor(i, 'correct-location');
-      updateKeyColor(guessLetters[i], 'correct-location-key');
-    } else {
-      updateBoxColor(i, 'wrong');
-      updateKeyColor(guessLetters[i], 'wrong-key');
-    }
-  }
 
 }
 
 function updateBoxColor(letterLocation, className) {
   var row = [];
 
-  for (var i = 0; i < inputs.length; i++) {
-    if(inputs[i].id.includes(`-${currentRow}-`)) {
-      row.push(inputs[i]);
-    }
-  }
+  inputs.forEach(input=>{
+    if(input.id.includes(`-${currentRow}-`)) {
+          row.push(input);
+        }
+  })
 
   row[letterLocation].classList.add(className);
 }
@@ -159,11 +159,11 @@ function updateBoxColor(letterLocation, className) {
 function updateKeyColor(letter, className) {
   var keyLetter = null;
 
-  for (var i = 0; i < keyLetters.length; i++) {
-    if (keyLetters[i].innerText === letter) {
-      keyLetter = keyLetters[i];
-    }
-  }
+  keyLetters.forEach(key => {
+    if (key.innerText === letter) {
+          keyLetter = key;
+        }
+  })
 
   keyLetter.classList.add(className);
 }
@@ -178,14 +178,26 @@ function changeRow() {
 }
 
 function declareWinner() {
-  recordGameStats();
+  recordGameStats(true);
   changeGameOverText();
   viewGameOverMessage();
   setTimeout(startNewGame, 4000);
 }
 
-function recordGameStats() {
-  gamesPlayed.push({ solved: true, guesses: currentRow });
+function declareLoser() {
+  recordGameStats(false);
+  errorMessage.innerText = `The winning word was ${winningWord}, try again!`
+  setTimeout(startNewGame, 4000);
+}
+
+function recordGameStats(gameState) {
+  fetch(`http://localhost:3001/api/v1/games`,{
+    method: 'POST',
+    body: JSON.stringify({ solved: gameState, guesses: currentRow }),
+    headers: {
+       'Content-Type': "application/json"
+    }
+  }).then(response => response.json())
 }
 
 function changeGameOverText() {
@@ -199,6 +211,7 @@ function changeGameOverText() {
 
 function startNewGame() {
   clearGameBoard();
+  errorMessage.innerText = ''
   clearKey();
   setGame();
   viewGame();
@@ -206,16 +219,51 @@ function startNewGame() {
 }
 
 function clearGameBoard() {
-  for (var i = 0; i < inputs.length; i++) {
-    inputs[i].value = '';
-    inputs[i].classList.remove('correct-location', 'wrong-location', 'wrong');
-  }
+  inputs.forEach(input => {
+    input.value = '';
+    input.classList.remove('correct-location', 'wrong-location', 'wrong');
+  })
 }
 
 function clearKey() {
-  for (var i = 0; i < keyLetters.length; i++) {
-    keyLetters[i].classList.remove('correct-location-key', 'wrong-location-key', 'wrong-key');
+  keyLetters.forEach(key => {
+    key.classList.remove('correct-location-key', 'wrong-location-key', 'wrong-key');
+  })
+}
+
+function findGamesPlayed(){
+  return gamesPlayed.length
+}
+
+function findGuessCorrectPercent() {
+  if (gamesPlayed.length !== 0) {
+    return (gamesPlayed.reduce((numberCorrect,game)=>{
+      if(game.solved){
+        numberCorrect++
+      }
+      return numberCorrect
+    },0)/gamesPlayed.length * 100).toFixed(2)
+  } else {
+    return 0
   }
+}
+
+function findAverageGuesses() {
+  if (gamesPlayed.length > 0 ) {
+    return (gamesPlayed.reduce((numberGuesses,game)=>{
+      numberGuesses += (game.numGuesses)
+      return numberGuesses
+    },0)/gamesPlayed.length).toFixed(2)
+  } else {
+    return 0
+  }
+}
+
+function fetchGameStats(){
+  returnDataPromises().then((data)=>{
+    gamesPlayed = data[1]
+  })
+  setTimeout(viewStats,50)
 }
 
 // Change Page View Functions
@@ -242,6 +290,9 @@ function viewGame() {
 }
 
 function viewStats() {
+  statsTotalGames.innerText = findGamesPlayed()
+  statsPercentCorrect.innerText = findGuessCorrectPercent()
+  statsAverageGuesses.innerText = findAverageGuesses()
   letterKey.classList.add('hidden');
   gameBoard.classList.add('collapsed');
   rules.classList.add('collapsed');
